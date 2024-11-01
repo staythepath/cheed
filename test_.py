@@ -1,30 +1,28 @@
-import os
 import django
-from post_manager.models import Post
+import os
+from scraped_data_queries import get_all_scraped_data, get_scraped_data_by_post_id
 from pprint import pprint
 
-# Set up the Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_main.settings')  # Adjust the settings path accordingly
+# Setup Django settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_main.settings')
 django.setup()
 
-# Fetch all posts from the Post model
-posts = Post.objects.all()
-for post in posts:
-    # Create a dictionary of the post's main attributes
-    post_dict = {
-        'Post ID': post.post_id,
-        'Title': post.title,
-        'Content': post.content,
-        'Community': post.community,
-        'Creator Name': post.creator_name,
-        'URL': post.url,
-        'Score': post.score,
-        'Comments Count': post.counts_comments,
-        'Community Description': post.community_description,
-        'Embed Title': post.embed_title,
-        'Embed Description': post.embed_description,
-    }
+def query_and_print_all_scraped_data():
+    # Query all scraped data entries
+    all_scraped_data = get_all_scraped_data()
 
-    # Pretty print the dictionary for easier viewing
-    pprint(post_dict)
-    print("\n" + "="*50 + "\n")
+    for data in all_scraped_data:
+        pprint({
+            'Post ID': data.post.post_id,
+            'Article Title': data.article_title,
+            'Authors': data.article_authors,
+            'Publication Date': data.publication_date,
+            'Content': data.article_content,
+            'Top Image': data.top_image,
+            'Keywords': data.article_keywords,
+            'Summary': data.article_summary,
+        })
+        print("\n" + "=" * 50 + "\n")
+
+if __name__ == "__main__":
+    query_and_print_all_scraped_data()
