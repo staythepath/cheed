@@ -7,12 +7,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
 from activitypub import Actor as APActor, Activity as APActivity
+logger = logging.getLogger(__name__)
 
 def webfinger(request):
-    """WebFinger endpoint to provide actor discovery"""
     resource = request.GET.get('resource')
     if resource == 'acct:staythepath@ap.staythepath.lol':
-        response_data = {
+        return JsonResponse({
             "subject": "acct:staythepath@ap.staythepath.lol",
             "links": [
                 {
@@ -21,16 +21,14 @@ def webfinger(request):
                     "href": "https://ap.staythepath.lol/activitypub/actor/"
                 }
             ]
-        }
-        return JsonResponse(response_data)
-    
-    # If the requested resource is not found, respond with a 404 error
+        })
     return JsonResponse({"error": "Resource not found"}, status=404)
 
 
 
+
 def actor(request):
-    """Returns the Actor JSON data."""
+    """Returns the Actor JSON data for federated ActivityPub requests."""
     if request.method == "GET":
         try:
             actor_data = {
@@ -39,58 +37,52 @@ def actor(request):
                 "type": "Service",
                 "name": "Cheed Aggregator Service",
                 "inbox": "https://ap.staythepath.lol/activitypub/inbox/",
-                "outbox": "https://ap.staythepath.lol/activitypub/outbox/",
                 "publicKey": {
                     "id": "https://ap.staythepath.lol/activitypub/actor#main-key",
                     "owner": "https://ap.staythepath.lol/activitypub/actor/",
-                    "publicKeyPem": open('activitypub_server/public.pem').read()
+                    "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsAMRvlQ4v5Yex343kKzO\nsBzloZCS8XQVNruXo25adIFVjKH8ovSvp/t86P998ycx3Ea7AH75pc1tc6HoS4TH\n/OZ/masas0QJHfk663pHTQz6RceXPRIHgrx3HNDf1KFNlcZtfiFEhGKEdAjr/Q1y\nq6IgM+jRFyF8QXUHlYNUWoBRNeaYKAvNOPju3ODCTCNaxYJ45VK0Fblftday7Ha1\nBHe3b3X91cCfuFKmPoShiYqI9XueHLdUS7aIcc72PgZOeJputysrv2dDNdnxmiP1\nKAvdke4/4d4LSwMdf43oGspkAP9xk9d91+xNXWe1ywxqj/mkuYf+sn2v3WnvYOEf\nNQIDAQAB\n-----END PUBLIC KEY-----\n"
                 }
             }
-            logger.info(f"Actor endpoint accessed: {request.get_full_path()}")
-            response = JsonResponse(actor_data, status=200)
-            response["Content-Type"] = "application/activity+json"
-            return response
+            return JsonResponse(actor_data, status=200, content_type="application/activity+json")
 
         except Exception as e:
             logger.error(f"Error occurred: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
-    logger.warning(f"Invalid request method: {request.method}")
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
-# Inbox endpoint
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Inbox endpoin
 @csrf_exempt
 def inbox(request):
-    """Receives incoming federated activities."""
+    """Receives incoming federated activities from other servers and logs public posts."""
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            logger.info(f"Received activity: {data}")  # Log the received activity
-            activity_type = data.get("type")
+            logger.info(f"Received ActivityPub post data: {data}")
             
+            # Check activity type to process public "Create" posts
+            activity_type = data.get("type")
+            actor = data.get("actor")
             if activity_type == "Create":
-                # Handle a new post creation
-                activity = APActivity.from_dict(data)
-                # Logic to store activity or process further if needed.
+                content = data.get("object", {}).get("content", "No content found")
+                # Log or store the content as needed
+                logger.info(f"New public post from {actor}: {content}")
+                # Respond as per ActivityPub protocol for successful inbox receipt
                 return HttpResponse(status=202)
-            elif activity_type == "Follow":
-                # Handle follow requests
-                activity = APActivity.from_dict(data)
-                # Logic to store or approve follow if needed.
-                return HttpResponse(status=202)
-            else:
-                return HttpResponse(status=400)
+            
+            return HttpResponse(status=400)
+        
         except json.JSONDecodeError:
+            logger.error("Invalid JSON received in inbox.")
             return JsonResponse({"error": "Invalid JSON"}, status=400)
         except Exception as e:
             logger.error(f"Error handling inbox activity: {e}")
             return JsonResponse({"error": str(e)}, status=500)
 
     return HttpResponse(status=405)
+
+
+
 
 
 # Outbox endpoint
