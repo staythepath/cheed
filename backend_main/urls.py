@@ -15,8 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from activitypub_server import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('activitypub/', include('activitypub_server.urls')),
+    # Add the well-known webfinger path to map directly to the view
+    path('.well-known/webfinger', views.webfinger, name='webfinger'),
 ]
+

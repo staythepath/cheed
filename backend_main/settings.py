@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-!tu!t_nz156il67b@u)bzp==xaz8r@5g6k$e&w28v2$7c(r-a!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'ap.staythepath.lol',
+    '192.168.2.81',
+    '172.31.164.255',
+    '127.0.0.1',
+    ]
 
 
 # Application definition
@@ -42,6 +47,7 @@ INSTALLED_APPS = [
     'post_manager',
     'content_scraper',
     'post_processor',
+    'activitypub_server',
 ]
 
 MIDDLEWARE = [
